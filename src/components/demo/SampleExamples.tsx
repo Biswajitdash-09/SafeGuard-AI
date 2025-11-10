@@ -61,13 +61,13 @@ export const SampleExamples = ({ onExampleClick }: SampleExamplesProps) => {
           <Button
             key={index}
             variant="outline"
-            className="h-auto py-3 px-4 text-left justify-start items-start flex-col gap-2"
+            className="h-auto min-h-[80px] py-3 px-4 text-left justify-start items-start flex-col gap-2"
             onClick={() => onExampleClick(example.text)}
           >
-            <Badge variant={getTypeColor(example.type)} className="text-xs">
+            <Badge variant={getTypeColor(example.type)} className="text-xs flex-shrink-0">
               {example.label}
             </Badge>
-            <p className="text-xs text-muted-foreground line-clamp-2">
+            <p className="text-xs text-muted-foreground line-clamp-2 break-words w-full">
               {example.text}
             </p>
           </Button>

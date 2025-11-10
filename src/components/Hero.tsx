@@ -34,13 +34,13 @@ export const Hero = () => {
           </div>
 
           {/* Main Heading */}
-          <h1 className="text-5xl md:text-7xl font-bold text-primary-foreground leading-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-primary-foreground leading-tight px-4">
             Human-Centric Machine Learning for{" "}
             <span className="text-secondary-foreground">Online Safety</span>
           </h1>
 
           {/* Subheading */}
-          <p className="text-xl md:text-2xl text-primary-foreground/90 max-w-3xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-primary-foreground/90 max-w-3xl mx-auto px-4">
             A step against cyberbullying, information misutilization, and derogatory content. 
             Powered by cutting-edge research using BiLSTM + Self-Attention for Hindi/Hinglish content moderation.
           </p>
@@ -56,8 +56,8 @@ export const Hero = () => {
             </Button>
             <Button 
               size="lg"
-              variant="outline"
-              className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
+              variant="secondary"
+              className="shadow-lg"
             >
               Learn More
             </Button>

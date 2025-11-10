@@ -4,8 +4,8 @@ import { Mail, FileText } from "lucide-react";
 export const Footer = () => {
   return (
     <footer className="bg-card border-t border-border mt-auto">
-      <div className="container px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="container px-4 py-8 md:py-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
           {/* About Section */}
           <div>
             <h3 className="font-bold text-lg mb-4">AI Safety Platform</h3>
@@ -54,12 +54,12 @@ export const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-border mt-8 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-muted-foreground">
+        <div className="border-t border-border mt-6 md:mt-8 pt-6 md:pt-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-3 md:gap-4 text-center md:text-left">
+            <p className="text-xs md:text-sm text-muted-foreground">
               © {new Date().getFullYear()} AI Safety Platform. All rights reserved.
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs md:text-sm text-muted-foreground">
               Built with BiLSTM, Self-Attention, and Custom Feature Classification
             </p>
           </div>
