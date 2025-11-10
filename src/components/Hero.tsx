@@ -1,10 +1,17 @@
 import { Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-safety.jpg";
 
 export const Hero = () => {
+  const navigate = useNavigate();
+  
   const scrollToDemo = () => {
     document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleLearnMore = () => {
+    navigate('/research');
   };
 
   return (
@@ -57,6 +64,7 @@ export const Hero = () => {
             <Button 
               size="lg"
               variant="secondary"
+              onClick={handleLearnMore}
               className="shadow-lg"
             >
               Learn More
