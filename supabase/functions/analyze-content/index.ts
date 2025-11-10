@@ -20,21 +20,22 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    const systemPrompt = `You are a content safety analyzer based on BiLSTM + Self-Attention + Custom Focal Loss architecture, specializing in detecting cyberbullying, misinformation, and derogatory content in multiple languages including English, Hindi, and Hinglish (code-mixed).
+    const systemPrompt = `You are a content safety analyzer. Analyze the text for harmful content and RESPOND ONLY WITH VALID JSON - no explanations, no markdown, just pure JSON.
 
-Analyze the following text and provide a detailed safety assessment.
+CRITICAL: Your entire response must be valid JSON format.
 
-Categories to check (16 classes):
-- Cyberbullying, Hate Speech, Profanity, Threats, Misinformation, Derogatory Content, Sexual Harassment, Identity Attacks, Toxic Language, Insults, Obscene Content, Severe Toxicity, Religious Hate, Racial Hate, Gender-based Harassment, Age-based Discrimination
+Analyze for these 16 categories: Cyberbullying, Hate Speech, Profanity, Threats, Misinformation, Derogatory Content, Sexual Harassment, Identity Attacks, Toxic Language, Insults, Obscene Content, Severe Toxicity, Religious Hate, Racial Hate, Gender-based Harassment, Age-based Discrimination.
 
-Return a JSON object with:
-- safe (boolean): whether the content is safe
-- categories (array of objects): detected harmful categories with {name: string, confidence: number (0-1), severity: "low"|"medium"|"high"}
-- overallSeverity (string): "none", "low", "medium", or "high"
-- explanation (string): brief explanation of the analysis
-- suggestions (string, optional): suggestions for safer content
-- detectedLanguage (object): {primary: "English"|"Hindi"|"Hinglish"|"Other", confidence: number (0-1), isCodeMixed: boolean}
-- attentionWeights (array): top 5-10 important words with {word: string, weight: number (0-1)}`;
+Return ONLY this JSON structure:
+{
+  "safe": boolean,
+  "categories": [{"name": "category name", "confidence": 0.0-1.0, "severity": "low"|"medium"|"high"}],
+  "overallSeverity": "none"|"low"|"medium"|"high",
+  "explanation": "brief explanation",
+  "suggestions": "optional suggestions",
+  "detectedLanguage": {"primary": "English"|"Hindi"|"Hinglish"|"Other", "confidence": 0.0-1.0, "isCodeMixed": boolean},
+  "attentionWeights": [{"word": "word", "weight": 0.0-1.0}]
+}`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -71,7 +72,27 @@ Return a JSON object with:
     }
 
     const data = await response.json();
-    const analysis = JSON.parse(data.choices[0].message.content);
+    
+    let analysis;
+    try {
+      const content = data.choices[0].message.content;
+      console.log('AI Response:', content);
+      analysis = JSON.parse(content);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      console.error('Raw content:', data.choices[0].message.content);
+      
+      // Return a safe fallback response
+      analysis = {
+        safe: true,
+        categories: [],
+        overallSeverity: "none",
+        explanation: "Unable to analyze content at this time. Please try again.",
+        detectedLanguage: { primary: "English", confidence: 0.5, isCodeMixed: false },
+        attentionWeights: []
+      };
+    }
+    
     const processingTime = Date.now() - startTime;
 
     return new Response(JSON.stringify({
