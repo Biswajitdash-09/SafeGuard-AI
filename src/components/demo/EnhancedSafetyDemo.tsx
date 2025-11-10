@@ -45,11 +45,24 @@ export const EnhancedSafetyDemo = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const { toast } = useToast();
 
+  const MAX_CHARS = 5000;
+  const charCount = text.length;
+  const isOverLimit = charCount > MAX_CHARS;
+
   const analyzeContent = async () => {
     if (!text.trim()) {
       toast({
         title: "Empty input",
         description: "Please enter some text to analyze.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isOverLimit) {
+      toast({
+        title: "Text too long",
+        description: `Please limit your text to ${MAX_CHARS} characters.`,
         variant: "destructive",
       });
       return;
@@ -63,9 +76,22 @@ export const EnhancedSafetyDemo = () => {
         body: { text }
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle specific error types
+        if (error.message?.includes('429')) {
+          throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+        }
+        if (error.message?.includes('402')) {
+          throw new Error('Service temporarily unavailable. Please try again later.');
+        }
+        throw error;
+      }
 
       setResult(data);
+      toast({
+        title: "Analysis complete",
+        description: data.safe ? "No harmful content detected" : "Potentially harmful content found",
+      });
     } catch (error: any) {
       console.error('Analysis error:', error);
       toast({
@@ -113,21 +139,31 @@ export const EnhancedSafetyDemo = () => {
 
           <Card className="p-8 space-y-6">
             <div>
-              <label className="text-sm font-medium mb-2 block">
-                Enter text to analyze
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium">
+                  Enter text to analyze
+                </label>
+                <span className={`text-xs ${isOverLimit ? 'text-destructive' : 'text-muted-foreground'}`}>
+                  {charCount} / {MAX_CHARS}
+                </span>
+              </div>
               <Textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Type or paste text here... (English, Hindi, or Hinglish)"
-                className="min-h-[150px] resize-none"
+                className={`min-h-[150px] resize-none ${isOverLimit ? 'border-destructive' : ''}`}
                 disabled={isAnalyzing}
               />
+              {isOverLimit && (
+                <p className="text-xs text-destructive mt-1">
+                  Text exceeds maximum length
+                </p>
+              )}
             </div>
 
             <Button 
               onClick={analyzeContent}
-              disabled={isAnalyzing || !text.trim()}
+              disabled={isAnalyzing || !text.trim() || isOverLimit}
               className="w-full"
               size="lg"
             >

@@ -6,6 +6,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper function to strip markdown code blocks from AI response
+function stripMarkdownCodeBlocks(text: string): string {
+  return text.replace(/^```(?:json)?\n?/gm, '').replace(/\n?```$/gm, '').trim();
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -20,13 +25,16 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    const systemPrompt = `You are a content safety analyzer. Analyze the text for harmful content and RESPOND ONLY WITH VALID JSON - no explanations, no markdown, just pure JSON.
+    const systemPrompt = `You are a content safety analyzer. 
 
-CRITICAL: Your entire response must be valid JSON format.
+CRITICAL INSTRUCTIONS:
+1. RESPOND ONLY WITH RAW JSON - NO markdown code blocks, NO backticks, NO explanations
+2. DO NOT wrap your response in \`\`\`json or \`\`\` 
+3. Your ENTIRE response must be ONLY the JSON object, starting with { and ending with }
 
-Analyze for these 16 categories: Cyberbullying, Hate Speech, Profanity, Threats, Misinformation, Derogatory Content, Sexual Harassment, Identity Attacks, Toxic Language, Insults, Obscene Content, Severe Toxicity, Religious Hate, Racial Hate, Gender-based Harassment, Age-based Discrimination.
+Analyze the text for harmful content across these 16 categories: Cyberbullying, Hate Speech, Profanity, Threats, Misinformation, Derogatory Content, Sexual Harassment, Identity Attacks, Toxic Language, Insults, Obscene Content, Severe Toxicity, Religious Hate, Racial Hate, Gender-based Harassment, Age-based Discrimination.
 
-Return ONLY this JSON structure:
+Return this EXACT JSON structure with NO markdown formatting:
 {
   "safe": boolean,
   "categories": [{"name": "category name", "confidence": 0.0-1.0, "severity": "low"|"medium"|"high"}],
@@ -75,12 +83,17 @@ Return ONLY this JSON structure:
     
     let analysis;
     try {
-      const content = data.choices[0].message.content;
-      console.log('AI Response:', content);
+      let content = data.choices[0].message.content;
+      console.log('Raw AI Response:', content);
+      
+      // Strip any markdown code blocks
+      content = stripMarkdownCodeBlocks(content);
+      console.log('Cleaned content:', content);
+      
       analysis = JSON.parse(content);
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
-      console.error('Raw content:', data.choices[0].message.content);
+      console.error('Failed content:', data.choices[0]?.message?.content);
       
       // Return a safe fallback response
       analysis = {

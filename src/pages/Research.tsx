@@ -7,10 +7,11 @@ import { DownloadPaper } from "@/components/DownloadPaper";
 import { ModelComparison } from "@/components/ModelComparison";
 import { CitationExport } from "@/components/research/CitationExport";
 import { PerformanceCharts } from "@/components/research/PerformanceCharts";
+import { Footer } from "@/components/Footer";
 
 const Research = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <ResearchHero />
       <DownloadPaper />
       <CitationExport />
@@ -20,6 +21,7 @@ const Research = () => {
       <PerformanceCharts />
       <ResultsSection />
       <TeamSection />
+      <Footer />
     </div>
   );
 };
