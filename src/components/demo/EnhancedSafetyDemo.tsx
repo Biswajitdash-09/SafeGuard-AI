@@ -163,7 +163,7 @@ export const EnhancedSafetyDemo = () => {
                         </h3>
                       </div>
                       <Badge variant={result.safe ? "secondary" : "destructive"}>
-                        {result.overallSeverity.toUpperCase()}
+                        {result.overallSeverity?.toUpperCase() || "UNKNOWN"}
                       </Badge>
                     </div>
 
