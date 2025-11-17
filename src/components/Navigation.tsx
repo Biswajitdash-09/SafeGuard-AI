@@ -42,6 +42,13 @@ export const Navigation = () => {
             >
               Research
             </NavLink>
+            <NavLink 
+              to="/dashboard" 
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              activeClassName="text-foreground"
+            >
+              Dashboard
+            </NavLink>
             <ThemeToggle />
           </div>
 
@@ -81,6 +88,14 @@ export const Navigation = () => {
                 onClick={() => setIsOpen(false)}
               >
                 Research
+              </NavLink>
+              <NavLink 
+                to="/dashboard" 
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                activeClassName="text-foreground"
+                onClick={() => setIsOpen(false)}
+              >
+                Dashboard
               </NavLink>
             </div>
           </div>

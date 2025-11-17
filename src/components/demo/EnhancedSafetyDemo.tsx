@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { AttentionWeightVisualizer } from "./AttentionWeightVisualizer";
 import { CategoryBreakdown } from "./CategoryBreakdown";
 import { SampleExamples } from "./SampleExamples";
+import { BatchAnalysis } from "./BatchAnalysis";
+import { ExportPDF } from "./ExportPDF";
 import { useAnalysisHistory } from "@/hooks/useAnalysisHistory";
 
 interface AnalysisResult {
@@ -267,7 +269,7 @@ export const EnhancedSafetyDemo = () => {
                   </TabsList>
 
                   <TabsContent value="overview" className="space-y-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-3">
                         {result.safe ? (
                           <CheckCircle className="w-6 h-6 text-secondary" />
@@ -278,9 +280,12 @@ export const EnhancedSafetyDemo = () => {
                           {result.safe ? "Content appears safe" : "Potentially harmful content detected"}
                         </h3>
                       </div>
-                      <Badge variant={result.safe ? "secondary" : "destructive"}>
-                        {result.overallSeverity?.toUpperCase() || "UNKNOWN"}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={result.safe ? "secondary" : "destructive"}>
+                          {result.overallSeverity?.toUpperCase() || "UNKNOWN"}
+                        </Badge>
+                        <ExportPDF result={result} text={text} />
+                      </div>
                     </div>
 
                     {result.detectedLanguage && (
