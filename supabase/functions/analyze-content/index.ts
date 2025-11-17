@@ -16,13 +16,31 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  const requestTimeout = 15000; // 15 second timeout
+  const maxRetries = 2;
+
   try {
     const { text } = await req.json();
-    const startTime = Date.now();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
+    }
+
+    // Validate input
+    if (!text || typeof text !== 'string') {
+      return new Response(JSON.stringify({ error: 'Invalid input: text is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (text.length > 10000) {
+      return new Response(JSON.stringify({ error: 'Text too long. Maximum 10,000 characters allowed.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const systemPrompt = `You are a content safety analyzer. 
@@ -45,21 +63,47 @@ Return this EXACT JSON structure with NO markdown formatting:
   "attentionWeights": [{"word": "word", "weight": 0.0-1.0}]
 }`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Analyze this text: "${text}"` }
-        ],
-        response_format: { type: "json_object" }
-      }),
-    });
+    // Retry logic with exponential backoff
+    let response;
+    let lastError;
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), requestTimeout);
+
+        response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: `Analyze this text: "${text}"` }
+            ],
+            response_format: { type: "json_object" }
+          }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+        break; // Success, exit retry loop
+      } catch (error) {
+        lastError = error;
+        if (attempt < maxRetries) {
+          const backoffTime = Math.pow(2, attempt) * 1000; // Exponential backoff
+          console.log(`Retry attempt ${attempt + 1} after ${backoffTime}ms`);
+          await new Promise(resolve => setTimeout(resolve, backoffTime));
+        }
+      }
+    }
+
+    if (!response) {
+      throw lastError || new Error('Failed to get response after retries');
+    }
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -108,6 +152,14 @@ Return this EXACT JSON structure with NO markdown formatting:
     
     const processingTime = Date.now() - startTime;
 
+    // Log performance metrics
+    console.log('Performance metrics:', {
+      processingTime,
+      textLength: text.length,
+      categoriesDetected: analysis.categories?.length || 0,
+      timestamp: new Date().toISOString()
+    });
+
     return new Response(JSON.stringify({
       ...analysis,
       processingTime,
@@ -121,10 +173,20 @@ Return this EXACT JSON structure with NO markdown formatting:
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error in analyze-content function:', error);
+    console.error('Error in analyze-content function:', {
+      error,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    });
+    
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      status: 500,
+    const isTimeout = errorMessage.includes('abort');
+    
+    return new Response(JSON.stringify({ 
+      error: isTimeout ? 'Request timeout. Please try again with shorter text.' : errorMessage 
+    }), {
+      status: isTimeout ? 408 : 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

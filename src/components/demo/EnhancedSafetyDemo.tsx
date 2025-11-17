@@ -4,12 +4,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, CheckCircle, AlertCircle, Globe, Clock, Zap } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle, Globe, Clock, Zap, History, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { AttentionWeightVisualizer } from "./AttentionWeightVisualizer";
 import { CategoryBreakdown } from "./CategoryBreakdown";
 import { SampleExamples } from "./SampleExamples";
+import { useAnalysisHistory } from "@/hooks/useAnalysisHistory";
 
 interface AnalysisResult {
   safe: boolean;
@@ -43,7 +44,10 @@ export const EnhancedSafetyDemo = () => {
   const [text, setText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [processingStage, setProcessingStage] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
   const { toast } = useToast();
+  const { history, addToHistory, clearHistory, removeItem } = useAnalysisHistory();
 
   const MAX_CHARS = 5000;
   const charCount = text.length;
@@ -70,11 +74,16 @@ export const EnhancedSafetyDemo = () => {
 
     setIsAnalyzing(true);
     setResult(null);
+    const clientStartTime = Date.now();
 
     try {
+      setProcessingStage("Sending request...");
+      
       const { data, error } = await supabase.functions.invoke('analyze-content', {
         body: { text }
       });
+
+      setProcessingStage("Processing response...");
 
       if (error) {
         // Handle specific error types
@@ -87,10 +96,14 @@ export const EnhancedSafetyDemo = () => {
         throw error;
       }
 
-      setResult(data);
+      const totalTime = Date.now() - clientStartTime;
+      
+      setResult({ ...data, totalClientTime: totalTime });
+      addToHistory(text, { ...data, totalClientTime: totalTime });
+      
       toast({
         title: "Analysis complete",
-        description: data.safe ? "No harmful content detected" : "Potentially harmful content found",
+        description: `${data.safe ? "No harmful content detected" : "Potentially harmful content found"} (${totalTime}ms)`,
       });
     } catch (error: any) {
       console.error('Analysis error:', error);
@@ -101,12 +114,19 @@ export const EnhancedSafetyDemo = () => {
       });
     } finally {
       setIsAnalyzing(false);
+      setProcessingStage("");
     }
   };
 
   const handleExampleClick = (exampleText: string) => {
     setText(exampleText);
     setResult(null);
+  };
+
+  const loadFromHistory = (item: any) => {
+    setText(item.text);
+    setResult(item.result);
+    setShowHistory(false);
   };
 
   return (
@@ -137,6 +157,57 @@ export const EnhancedSafetyDemo = () => {
 
           <SampleExamples onExampleClick={handleExampleClick} />
 
+          {history.length > 0 && (
+            <Card className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowHistory(!showHistory)}
+                >
+                  <History className="w-4 h-4 mr-2" />
+                  History ({history.length})
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearHistory}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Clear All
+                </Button>
+              </div>
+              {showHistory && (
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {history.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-3 border rounded-lg hover:bg-muted/50 cursor-pointer flex justify-between items-start gap-2"
+                      onClick={() => loadFromHistory(item)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm truncate">{item.text}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(item.timestamp).toLocaleString()}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeItem(item.id);
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          )}
+
           <Card className="p-8 space-y-6">
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -161,21 +232,30 @@ export const EnhancedSafetyDemo = () => {
               )}
             </div>
 
-            <Button 
-              onClick={analyzeContent}
-              disabled={isAnalyzing || !text.trim() || isOverLimit}
-              className="w-full"
-              size="lg"
-            >
-              {isAnalyzing ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Analyzing with BiLSTM + SAM...
-                </>
-              ) : (
-                "Analyze Content"
+            <div className="space-y-2">
+              <Button 
+                onClick={analyzeContent}
+                disabled={isAnalyzing || !text.trim() || isOverLimit}
+                className="w-full"
+                size="lg"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {processingStage || "Analyzing with BiLSTM + SAM..."}
+                  </>
+                ) : (
+                  "Analyze Content"
+                )}
+              </Button>
+              {result && (result as any).totalClientTime && (
+                <p className="text-center text-xs text-muted-foreground">
+                  <Clock className="w-3 h-3 inline mr-1" />
+                  Total response time: {(result as any).totalClientTime}ms
+                  {result.processingTime && ` (Server: ${result.processingTime}ms)`}
+                </p>
               )}
-            </Button>
+            </div>
 
             {result && (
               <Card className="p-6 border-2">

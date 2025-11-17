@@ -13,7 +13,26 @@ interface CategoryBreakdownProps {
   categories: Category[];
 }
 
+const ALL_CATEGORIES = [
+  "Cyberbullying", "Hate Speech", "Profanity", "Threats",
+  "Misinformation", "Derogatory Content", "Sexual Harassment",
+  "Identity Attacks", "Toxic Language", "Insults",
+  "Obscene Content", "Severe Toxicity", "Religious Hate",
+  "Racial Hate", "Gender-based Harassment", "Age-based Discrimination"
+];
+
 export const CategoryBreakdown = ({ categories }: CategoryBreakdownProps) => {
+  // Merge detected categories with all categories
+  const displayCategories = ALL_CATEGORIES.map(categoryName => {
+    const detected = categories.find(c => c.name === categoryName);
+    return detected || {
+      name: categoryName,
+      confidence: 0,
+      severity: "low" as const
+    };
+  });
+
+  const detectedCount = categories.length;
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
       case "high":
@@ -40,46 +59,43 @@ export const CategoryBreakdown = ({ categories }: CategoryBreakdownProps) => {
     }
   };
 
-  if (categories.length === 0) {
-    return (
-      <Card className="p-6">
-        <div className="flex items-center gap-3 text-secondary">
-          <CheckCircle className="w-6 h-6" />
-          <div>
-            <p className="font-medium">No harmful content detected</p>
-            <p className="text-sm text-muted-foreground">All 16 safety categories passed</p>
-          </div>
-        </div>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-4">
       <div className="p-4 bg-muted/50 rounded-lg">
         <p className="text-sm text-muted-foreground">
-          Detected {categories.length} potential issue{categories.length > 1 ? 's' : ''} across our 16-class safety taxonomy
+          {detectedCount === 0 
+            ? "✓ All 16 safety categories passed - no harmful content detected"
+            : `Detected ${detectedCount} potential issue${detectedCount > 1 ? 's' : ''} across our 16-class safety taxonomy`
+          }
         </p>
       </div>
 
-      <div className="space-y-3">
-        {categories.map((category, index) => (
-          <Card key={index} className="p-4">
+      <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+        {displayCategories.map((category, index) => (
+          <Card key={index} className={`p-4 ${category.confidence === 0 ? 'opacity-50' : ''}`}>
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-3">
-                {getSeverityIcon(category.severity)}
+                {getSeverityIcon(category.confidence > 0 ? category.severity : "low")}
                 <div>
                   <p className="font-medium">{category.name}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <Badge 
-                      variant={category.severity === "high" ? "destructive" : "outline"}
-                      className="text-xs"
-                    >
-                      {category.severity.toUpperCase()}
-                    </Badge>
-                    <span className={`text-sm font-medium ${getSeverityColor(category.severity)}`}>
-                      {Math.round(category.confidence * 100)}% confidence
-                    </span>
+                    {category.confidence > 0 ? (
+                      <>
+                        <Badge 
+                          variant={category.severity === "high" ? "destructive" : "outline"}
+                          className="text-xs"
+                        >
+                          {category.severity.toUpperCase()}
+                        </Badge>
+                        <span className={`text-sm font-medium ${getSeverityColor(category.severity)}`}>
+                          {Math.round(category.confidence * 100)}% confidence
+                        </span>
+                      </>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">
+                        NOT DETECTED
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
