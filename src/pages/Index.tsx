@@ -2,6 +2,7 @@ import { Navigation } from "@/components/Navigation";
 import { Hero } from "@/components/Hero";
 import { Features } from "@/components/Features";
 import { EnhancedSafetyDemo } from "@/components/demo/EnhancedSafetyDemo";
+import { BatchAnalysis } from "@/components/demo/BatchAnalysis";
 import { EducationalContent } from "@/components/education/EducationalContent";
 import { Statistics } from "@/components/Statistics";
 import { Footer } from "@/components/Footer";
@@ -14,6 +15,10 @@ const Index = () => {
       <Features />
       <EducationalContent />
       <EnhancedSafetyDemo />
+      <div className="container px-4 py-12 bg-muted/30">
+        <h2 className="text-3xl font-bold text-center mb-8">Batch Processing</h2>
+        <BatchAnalysis />
+      </div>
       <Statistics />
       <Footer />
     </div>
